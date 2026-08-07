@@ -9,7 +9,12 @@ import {
 import { resetSharedRateLimiterForTests, BestEffortRateLimiter } from "../src/limits.js";
 import { setLogSinkForTests } from "../src/logger.js";
 import { handleRequest, main } from "../src/index.js";
-import { buildTelegramUrl, callTelegram, computeUpstreamTimeout } from "../src/telegram.js";
+import {
+  buildTelegramUrl,
+  callTelegram,
+  computeUpstreamTimeout,
+  telegramUpstreamOutcome,
+} from "../src/telegram.js";
 import { TELEGRAM_API_ORIGIN } from "../src/domain.js";
 import {
   DISABLED_KEY,
@@ -485,6 +490,21 @@ describe("telegram upstream", () => {
       fetchImpl: oversized,
     });
     expect(o.ok).toBe(false);
+
+    const declaredHuge = (async () =>
+      new Response('{"ok":true}', {
+        status: 200,
+        headers: { "content-length": String(950 * 1024) },
+      })) as typeof fetch;
+    const d = await callTelegram({
+      botToken: FAKE_BOT_TOKEN,
+      method: "getMe",
+      params: {},
+      timeoutMs: 1000,
+      remainingMs: 5000,
+      fetchImpl: declaredHuge,
+    });
+    expect(d.ok).toBe(false);
   });
 
   it("preserves Telegram 400/429/500 and safe retry-after", async () => {
@@ -640,7 +660,7 @@ describe("logging redaction", () => {
         }),
         { getRemainingTimeInMillis: () => 25_000 },
         {
-          env: testEnv({ NODEGRAM_LOG_BOT_ALIAS: "true" }),
+          env: testEnv({ NODEGRAM_LOG_BOT_ID: "true" }),
           fetchImpl: mockFetchJson(200, { ok: true, result: {} }),
         },
       );
@@ -654,11 +674,48 @@ describe("logging redaction", () => {
       expect(joined).not.toContain(TEST_KEY_HASH);
       expect(joined).not.toContain(`${TELEGRAM_API_ORIGIN}/bot`);
       const parsed = JSON.parse(lines[0]!);
-      expect(parsed.outcome).toBe("OK");
+      expect(parsed.outcome).toBe("TELEGRAM_OK");
       expect(parsed.bot_id).toBe("123456789");
       expect(parsed.method).toBe("sendMessage");
     } finally {
       restore();
+    }
+  });
+
+  it("classifies telegramUpstreamOutcome for non-2xx bands", () => {
+    expect(telegramUpstreamOutcome(201)).toBe("TELEGRAM_OK");
+    expect(telegramUpstreamOutcome(403)).toBe("TELEGRAM_CLIENT_ERROR");
+    expect(telegramUpstreamOutcome(429)).toBe("TELEGRAM_RATE_LIMITED");
+    expect(telegramUpstreamOutcome(503)).toBe("TELEGRAM_SERVER_ERROR");
+    expect(telegramUpstreamOutcome(100)).toBe("TELEGRAM_CLIENT_ERROR");
+  });
+
+  it("maps Telegram HTTP statuses to distinct log outcomes", async () => {
+    const cases: Array<{ status: number; outcome: string }> = [
+      { status: 200, outcome: "TELEGRAM_OK" },
+      { status: 400, outcome: "TELEGRAM_CLIENT_ERROR" },
+      { status: 429, outcome: "TELEGRAM_RATE_LIMITED" },
+      { status: 500, outcome: "TELEGRAM_SERVER_ERROR" },
+    ];
+    for (const { status, outcome } of cases) {
+      const { lines, restore } = captureLogs();
+      try {
+        resetConfigCacheForTests();
+        await handleRequest(
+          rawEvent({ body: relayBody({ method: "getMe", params: {} }) }),
+          { getRemainingTimeInMillis: () => 25_000 },
+          {
+            env: testEnv(),
+            fetchImpl: mockFetchJson(status, { ok: false, description: "upstream" }),
+          },
+        );
+        expect(lines).toHaveLength(1);
+        const parsed = JSON.parse(lines[0]!);
+        expect(parsed.outcome).toBe(outcome);
+        expect(parsed.upstream_status).toBe(status);
+      } finally {
+        restore();
+      }
     }
   });
 });

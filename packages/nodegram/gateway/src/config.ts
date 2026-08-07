@@ -229,7 +229,8 @@ export function loadRuntimeSettings(env: NodeJS.ProcessEnv = process.env): Runti
     allowedOrigins,
     burst: burst === 0 ? 0 : Math.max(1, burst),
     refillPerSecond: refill,
-    logBotAlias: env.NODEGRAM_LOG_BOT_ALIAS === "true",
+    // Prefer NODEGRAM_LOG_BOT_ID; NODEGRAM_LOG_BOT_ALIAS is a deprecated alias name.
+    logBotId: env.NODEGRAM_LOG_BOT_ID === "true" || env.NODEGRAM_LOG_BOT_ALIAS === "true",
     buildId: env.NODEGRAM_BUILD_ID || undefined,
     rateLimitEnabled: !rateLimitDisabled,
   };

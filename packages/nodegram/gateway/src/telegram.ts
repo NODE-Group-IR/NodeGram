@@ -4,6 +4,7 @@ import {
   TIMEOUT_SAFETY_MARGIN_MS,
   type ErrorCode,
 } from "./domain.js";
+import { trustworthyContentLength } from "./request.js";
 
 export interface TelegramCallInput {
   botToken: string;
@@ -27,6 +28,20 @@ export type TelegramCallResult =
       code: Extract<ErrorCode, "BAD_GATEWAY" | "GATEWAY_TIMEOUT">;
       durationMs: number;
     };
+
+/** Completion-log outcome for a successfully received Telegram HTTP response. */
+export function telegramUpstreamOutcome(status: number): string {
+  if (status >= 200 && status < 300) {
+    return "TELEGRAM_OK";
+  }
+  if (status === 429) {
+    return "TELEGRAM_RATE_LIMITED";
+  }
+  if (status >= 500 && status <= 599) {
+    return "TELEGRAM_SERVER_ERROR";
+  }
+  return "TELEGRAM_CLIENT_ERROR";
+}
 
 export function computeUpstreamTimeout(configuredMs: number, remainingMs: number): number {
   const cappedByDeadline = Math.max(1, remainingMs - TIMEOUT_SAFETY_MARGIN_MS);
@@ -66,6 +81,66 @@ function parseRetryAfter(value: string | null): string | undefined {
   return undefined;
 }
 
+/**
+ * Read an upstream body with a hard byte cap.
+ * Rejects early when Content-Length exceeds the limit; otherwise enforces the
+ * limit while streaming so oversized payloads are not fully buffered first.
+ */
+export async function readLimitedResponseBody(
+  response: Response,
+  maxBytes: number,
+): Promise<{ ok: true; text: string } | { ok: false }> {
+  const declared = trustworthyContentLength(response.headers.get("content-length") ?? undefined);
+  if (declared !== undefined && declared > maxBytes) {
+    if (response.body) {
+      try {
+        await response.body.cancel();
+      } catch {
+        // best-effort cancel
+      }
+    }
+    return { ok: false };
+  }
+
+  if (!response.body) {
+    const rawText = await response.text();
+    if (Buffer.byteLength(rawText, "utf8") > maxBytes) {
+      return { ok: false };
+    }
+    return { ok: true, text: rawText };
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      if (!value) {
+        continue;
+      }
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return { ok: false };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    try {
+      await reader.cancel();
+    } catch {
+      // ignore
+    }
+    return { ok: false };
+  }
+
+  return { ok: true, text: Buffer.concat(chunks).toString("utf8") };
+}
+
 export async function callTelegram(input: TelegramCallInput): Promise<TelegramCallResult> {
   const started = Date.now();
   const timeoutMs = computeUpstreamTimeout(input.timeoutMs, input.remainingMs);
@@ -87,15 +162,14 @@ export async function callTelegram(input: TelegramCallInput): Promise<TelegramCa
       signal: controller.signal,
     });
 
-    const rawText = await response.text();
-    const byteLength = Buffer.byteLength(rawText, "utf8");
-    if (byteLength > MAX_RESPONSE_BODY_BYTES) {
+    const limited = await readLimitedResponseBody(response, MAX_RESPONSE_BODY_BYTES);
+    if (!limited.ok) {
       return { ok: false, code: "BAD_GATEWAY", durationMs: Date.now() - started };
     }
 
     let body: unknown;
     try {
-      body = JSON.parse(rawText);
+      body = JSON.parse(limited.text);
     } catch {
       return { ok: false, code: "BAD_GATEWAY", durationMs: Date.now() - started };
     }

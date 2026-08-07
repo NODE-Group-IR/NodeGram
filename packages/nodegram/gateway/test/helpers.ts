@@ -50,7 +50,7 @@ export function testEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
     NODEGRAM_MAX_BODY_BYTES: "768000",
     NODEGRAM_BURST: "1000",
     NODEGRAM_REFILL_PER_SECOND: "100",
-    NODEGRAM_LOG_BOT_ALIAS: "false",
+    NODEGRAM_LOG_BOT_ID: "false",
     NODEGRAM_BUILD_ID: "test-build",
     NODEGRAM_RATE_LIMIT: "off",
     ...extra,

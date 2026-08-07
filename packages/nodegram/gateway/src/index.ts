@@ -14,7 +14,7 @@ import {
   trustworthyContentLength,
 } from "./request.js";
 import { jsonResponse, nodegramError, telegramPassthrough } from "./response.js";
-import { callTelegram } from "./telegram.js";
+import { callTelegram, telegramUpstreamOutcome } from "./telegram.js";
 
 export interface DoHttpEvent {
   headers?: Record<string, string | string[] | undefined>;
@@ -159,7 +159,7 @@ export async function handleRequest(
     outcome: "OK",
     coldStart: false,
     started,
-    logBotId: settings.logBotAlias,
+    logBotId: settings.logBotId,
   };
 
   // CORS preflight
@@ -279,7 +279,7 @@ export async function handleRequest(
     return finish(state, nodegramError(tg.code, requestId, cors), now);
   }
 
-  state.outcome = "OK";
+  state.outcome = telegramUpstreamOutcome(tg.status);
   state.upstreamStatus = tg.status;
   return finish(state, telegramPassthrough(tg.status, tg.body, tg.retryAfter, cors), now);
 }

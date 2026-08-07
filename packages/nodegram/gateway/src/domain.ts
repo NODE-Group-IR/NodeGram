@@ -2,7 +2,6 @@
 export type ErrorCode =
   | "INVALID_REQUEST"
   | "UNAUTHORIZED"
-  | "FORBIDDEN"
   | "METHOD_NOT_ALLOWED"
   | "PAYLOAD_TOO_LARGE"
   | "UNSUPPORTED_MEDIA_TYPE"
@@ -46,7 +45,8 @@ export interface RuntimeSettings {
   allowedOrigins: readonly string[];
   burst: number;
   refillPerSecond: number;
-  logBotAlias: boolean;
+  /** When true, completion logs may include numeric Telegram bot id (never the token secret). */
+  logBotId: boolean;
   buildId: string | undefined;
   rateLimitEnabled: boolean;
 }
@@ -82,7 +82,6 @@ export const DANGEROUS_KEYS = new Set(["__proto__", "prototype", "constructor"])
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   INVALID_REQUEST: "Invalid request",
   UNAUTHORIZED: "Invalid or missing client credentials",
-  FORBIDDEN: "Client is not allowed to perform this action",
   METHOD_NOT_ALLOWED: "Method not allowed",
   PAYLOAD_TOO_LARGE: "Request payload too large",
   UNSUPPORTED_MEDIA_TYPE: "Unsupported media type",
@@ -96,7 +95,6 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
 export const STATUS_FOR_CODE: Record<ErrorCode, number> = {
   INVALID_REQUEST: 400,
   UNAUTHORIZED: 401,
-  FORBIDDEN: 403,
   METHOD_NOT_ALLOWED: 405,
   PAYLOAD_TOO_LARGE: 413,
   UNSUPPORTED_MEDIA_TYPE: 415,

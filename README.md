@@ -12,6 +12,9 @@ NodeGram lets an application call a small authenticated gateway hosted on Digita
 
 NodeGram is an open-source project by [NODE Group](https://www.nodegroup.ir/).
 
+> [!TIP]
+> **In Iran without DigitalOcean access?** If you cannot create or reach a DigitalOcean Functions namespace yourself, contact [@biztaghavi](https://t.me/biztaghavi) on Telegram. He can help you use a shared NodeGram URL so your app can call the Bot API.
+
 > [!IMPORTANT]
 > NodeGram is an application-layer gateway for the **official Telegram Bot API**. It is not an MTProto proxy, VPN, user-account client, censorship-circumvention service for Telegram apps, or general-purpose HTTP proxy. It must never accept arbitrary upstream URLs.
 
@@ -120,8 +123,7 @@ Required status behavior:
 | ------ | ------------------------------------------------------------ |
 | `200`  | Telegram accepted the request; inspect Telegram's `ok` field |
 | `400`  | Invalid NodeGram request envelope                            |
-| `401`  | Missing or invalid client key                                |
-| `403`  | Authenticated client is not allowed to perform this action   |
+| `401`  | Missing or invalid gateway client key                        |
 | `405`  | Method other than `POST`                                     |
 | `413`  | Request exceeds NodeGram's conservative payload limit        |
 | `429`  | Local best-effort throttle or Telegram rate limit            |
@@ -263,6 +265,8 @@ Operational rules:
 
 ## Deploy to DigitalOcean Functions
 
+If you are in Iran (or elsewhere) and cannot access DigitalOcean to deploy your own namespace, message [@biztaghavi](https://t.me/biztaghavi) on Telegram for help using a shared NodeGram URL.
+
 The implementation target is Node.js 22 and TypeScript compiled into one small CommonJS bundle. DigitalOcean currently supports `nodejs:22`; the handler receives `(event, context)` and returns a response object. See the official [Node.js runtime documentation](https://docs.digitalocean.com/products/functions/reference/runtimes/node-js/) and [`project.yml` reference](https://docs.digitalocean.com/products/functions/reference/project-configuration/).
 
 ### 1. Install and authenticate `doctl`
@@ -350,6 +354,7 @@ Call the health endpoint first, then `getMe` with your bot token in the body, an
 | Bot-token exposure    | Tokens transit only over HTTPS; never log tokens or put them in NodeGram URLs/query strings                |
 | Open anonymous relay  | Require a revocable gateway Bearer key; reject missing/invalid keys with 401                               |
 | Oversized payload     | Reject using both declared length and decoded byte length before upstream fetch                            |
+| Oversized upstream    | Reject Telegram `Content-Length` above 900 KiB; enforce the same cap while streaming                       |
 | Hanging upstream      | AbortController timeout capped below Function deadline                                                     |
 | Redirect attack       | `redirect: "error"` on upstream fetch                                                                      |
 | Secret-bearing errors | Map upstream/network errors to sanitized stable codes                                                      |
@@ -365,9 +370,9 @@ Emit one structured JSON log per request containing only:
 - timestamp
 - request ID
 - anonymized client ID or stable non-secret hash
-- numeric bot id only when `NODEGRAM_LOG_BOT_ALIAS=true` (never the token secret)
+- numeric `bot_id` only when `NODEGRAM_LOG_BOT_ID=true` (never the token secret)
 - Telegram method
-- NodeGram outcome code
+- NodeGram outcome code (`TELEGRAM_OK`, `TELEGRAM_CLIENT_ERROR`, `TELEGRAM_RATE_LIMITED`, `TELEGRAM_SERVER_ERROR`, or gateway error codes)
 - upstream status
 - duration in milliseconds
 - cold-start flag

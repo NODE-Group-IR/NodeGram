@@ -60,7 +60,6 @@ Safe `retry-after` values from Telegram may be forwarded.
 | ------ | ---------------------------------------- | -------------------------------------------- |
 | 400    | `INVALID_REQUEST`                        | Malformed envelope or validation failure     |
 | 401    | `UNAUTHORIZED`                           | Missing/invalid/disabled gateway credentials |
-| 403    | `FORBIDDEN`                              | Authenticated client not allowed             |
 | 405    | `METHOD_NOT_ALLOWED`                     | Non-POST (except health/CORS)                |
 | 413    | `PAYLOAD_TOO_LARGE`                      | Body exceeds configured limit                |
 | 415    | `UNSUPPORTED_MEDIA_TYPE`                 | Content-Type is not JSON                     |
@@ -68,6 +67,8 @@ Safe `retry-after` values from Telegram may be forwarded.
 | 500    | `CONFIGURATION_ERROR` / `INTERNAL_ERROR` | Config or unexpected failure                 |
 | 502    | `BAD_GATEWAY`                            | Invalid/unavailable Telegram response        |
 | 504    | `GATEWAY_TIMEOUT`                        | Upstream timed out                           |
+
+v1.1 (bring-your-own-token) does not emit `403 FORBIDDEN`: after gateway authentication succeeds, any well-formed Telegram bot token may be used. Invalid or disabled gateway keys are always `401`.
 
 ## `GET /?health=1`
 

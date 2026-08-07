@@ -9,6 +9,7 @@
 | Stolen gateway key    | Store only SHA-256 hashes; constant-time compare; rotate with two hashes              |
 | Bot-token exposure    | Never log tokens; never accept tokens in URL/query; apps store their own tokens       |
 | Oversized payload     | Reject declared and actual decoded sizes before upstream                              |
+| Oversized upstream    | Reject Telegram `Content-Length` above 900 KiB; enforce the same cap while streaming  |
 | Hanging upstream      | `AbortController` timeout capped below Function deadline                              |
 | Redirect attack       | `redirect: "error"`                                                                   |
 | Secret-bearing errors | Stable sanitized codes only                                                           |
@@ -20,9 +21,10 @@
 - [ ] Generate gateway keys with `npm run keygen`; store plaintext only in your secret manager
 - [ ] Put only key hashes in `NODEGRAM_CLIENTS_B64`
 - [ ] Each app keeps its own Telegram bot token as `TELEGRAM_BOT_TOKEN` (or equivalent) and sends it per request
-- [ ] Keep `.env` and `clients.local.json` out of Git
+- [ ] Keep `.env` and `clients.local.json` out of Git — never store Telegram bot tokens in Function config
 - [ ] Do not enable permissive CORS (`*`) with Authorization
-- [ ] Treat the in-memory limiter as best-effort only
+- [ ] Treat the in-memory limiter as best-effort only (`NODEGRAM_RATE_LIMIT=off` or `NODEGRAM_BURST=0` to disable)
+- [ ] If enabling `NODEGRAM_LOG_BOT_ID=true`, understand logs may include numeric bot ids only — never token secrets
 - [ ] Never paste tokens, keys, chat IDs, or message bodies into issues or logs
 
 ## TLS

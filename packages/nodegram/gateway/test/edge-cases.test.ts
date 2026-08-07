@@ -129,14 +129,14 @@ describe("config edge cases", () => {
       NODEGRAM_ALLOWED_ORIGINS: "https://a.example.com, http://insecure.example.com, bad",
       NODEGRAM_BURST: "0",
       NODEGRAM_REFILL_PER_SECOND: "not-a-number",
-      NODEGRAM_LOG_BOT_ALIAS: "true",
+      NODEGRAM_LOG_BOT_ID: "true",
       NODEGRAM_BUILD_ID: "b1",
     });
     expect(s.maxBodyBytes).toBeLessThanOrEqual(900 * 1024);
     expect(s.requestTimeoutMs).toBeLessThanOrEqual(28_000);
     expect(s.allowedOrigins).toEqual(["https://a.example.com"]);
     expect(s.rateLimitEnabled).toBe(false);
-    expect(s.logBotAlias).toBe(true);
+    expect(s.logBotId).toBe(true);
     expect(s.buildId).toBe("b1");
 
     const s2 = loadRuntimeSettings({
@@ -146,6 +146,9 @@ describe("config edge cases", () => {
     });
     expect(s2.maxBodyBytes).toBe(750 * 1024);
     expect(s2.rateLimitEnabled).toBe(false);
+
+    const legacyLogFlag = loadRuntimeSettings({ NODEGRAM_LOG_BOT_ALIAS: "true" });
+    expect(legacyLogFlag.logBotId).toBe(true);
   });
 });
 

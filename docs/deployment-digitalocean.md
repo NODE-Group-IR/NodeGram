@@ -2,6 +2,8 @@
 
 Every command below uses placeholders. Replace them with your values. Do not paste live tokens into tickets or chat.
 
+> **No DigitalOcean access (for example from Iran)?** You do not need to deploy yourself. Contact [@biztaghavi](https://t.me/biztaghavi) on Telegram — he can help you use a shared NodeGram URL with a gateway key for your app.
+
 ## Prerequisites
 
 - Node.js 22+
@@ -26,23 +28,25 @@ Use a current namespace **access key**. DigitalOcean deprecated the legacy share
 ```bash
 cp .env.example .env
 npm run keygen
-# edit config/clients.local.json with keySha256 hashes and bot tokens
+# edit config/clients.local.json with gateway keySha256 hashes only
+# (Telegram bot tokens are NOT stored here — callers send them per request)
 node scripts/encode-config.mjs config/clients.local.json
 # paste the one-line base64 into NODEGRAM_CLIENTS_B64 in .env
 ```
 
 Suggested `.env` values:
 
-| Variable                      | Example                            |
-| ----------------------------- | ---------------------------------- |
-| `NODEGRAM_CLIENTS_B64`        | output of encode-config            |
-| `NODEGRAM_REQUEST_TIMEOUT_MS` | `20000`                            |
-| `NODEGRAM_MAX_BODY_BYTES`     | `768000`                           |
-| `NODEGRAM_ALLOWED_ORIGINS`    | empty or `https://app.example.com` |
-| `NODEGRAM_BURST`              | `30` (or `0` to disable limiter)   |
-| `NODEGRAM_REFILL_PER_SECOND`  | `5`                                |
-| `NODEGRAM_LOG_BOT_ALIAS`      | `false`                            |
-| `NODEGRAM_BUILD_ID`           | `git-sha-or-release`               |
+| Variable                      | Example                                            |
+| ----------------------------- | -------------------------------------------------- |
+| `NODEGRAM_CLIENTS_B64`        | output of encode-config (gateway key hashes only)  |
+| `NODEGRAM_REQUEST_TIMEOUT_MS` | `20000`                                            |
+| `NODEGRAM_MAX_BODY_BYTES`     | `768000`                                           |
+| `NODEGRAM_ALLOWED_ORIGINS`    | `none` or `https://app.example.com`                |
+| `NODEGRAM_BURST`              | `30` (or `0` to disable limiter)                   |
+| `NODEGRAM_REFILL_PER_SECOND`  | `5`                                                |
+| `NODEGRAM_RATE_LIMIT`         | `off` to disable, or omit / any other value for on |
+| `NODEGRAM_LOG_BOT_ID`         | `false` (`true` logs numeric bot id only)          |
+| `NODEGRAM_BUILD_ID`           | `git-sha-or-release`                               |
 
 `.env` must remain untracked.
 
@@ -116,7 +120,6 @@ doctl serverless deploy . --remote-build
 | --------------------- | --------------------------------------------------------------------------------------- |
 | `CONFIGURATION_ERROR` | `NODEGRAM_CLIENTS_B64` present, valid base64 JSON, schemaVersion 1                      |
 | `UNAUTHORIZED`        | Bearer key matches a configured hash; client `enabled: true`                            |
-| `FORBIDDEN`           | Authenticated client not allowed for this action                                        |
 | `504` / timeouts      | Lower Telegram `timeout` for `getUpdates`; raise Function timeout only within DO limits |
 | `413`                 | Payload under 750 KiB default / 900 KiB hard cap; remember 1 MB platform limit          |
 | CORS failures         | Exact HTTPS origin in `NODEGRAM_ALLOWED_ORIGINS`                                        |
