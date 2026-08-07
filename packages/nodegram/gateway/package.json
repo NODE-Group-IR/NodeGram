@@ -16,6 +16,6 @@
     "clean": "rm -f bundle.js bundle.js.map"
   },
   "dependencies": {
-    "esbuild": "^0.25.1"
+    "esbuild": "^0.28.1"
   }
 }
