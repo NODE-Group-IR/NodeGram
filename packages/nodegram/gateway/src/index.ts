@@ -101,13 +101,13 @@ function countAuthHeaders(headers: ReturnType<typeof normalizeHeaders>): number 
 interface CompletionState {
   requestId: string;
   clientRef?: string;
-  botAlias?: string;
+  botId?: string;
   method?: string;
   outcome: string;
   upstreamStatus?: number;
   coldStart: boolean;
   started: number;
-  logBotAlias: boolean;
+  logBotId: boolean;
 }
 
 function finish(
@@ -119,7 +119,7 @@ function finish(
     timestamp: new Date(now()).toISOString(),
     request_id: state.requestId,
     client_ref: state.clientRef,
-    bot_alias: state.logBotAlias ? state.botAlias : undefined,
+    bot_id: state.logBotId ? state.botId : undefined,
     method: state.method,
     outcome: state.outcome,
     upstream_status: state.upstreamStatus,
@@ -159,7 +159,7 @@ export async function handleRequest(
     outcome: "OK",
     coldStart: false,
     started,
-    logBotAlias: settings.logBotAlias,
+    logBotId: settings.logBotAlias,
   };
 
   // CORS preflight
@@ -252,15 +252,10 @@ export async function handleRequest(
     return fail(state, parsed.code, cors, now);
   }
 
-  const { bot, method, params } = parsed.envelope;
-  state.botAlias = bot;
+  const { token, method, params } = parsed.envelope;
   state.method = method;
-
-  // Bot alias authorization — only within authenticated client's map
-  const token = auth.client.bots.get(bot);
-  if (token === undefined) {
-    return fail(state, "FORBIDDEN", cors, now);
-  }
+  // Log only the numeric bot id prefix — never the secret token suffix.
+  state.botId = token.split(":")[0];
 
   // Best-effort rate limit
   if (settings.rateLimitEnabled) {
@@ -304,7 +299,7 @@ export async function main(
       timestamp: new Date().toISOString(),
       request_id: requestId,
       client_ref: undefined,
-      bot_alias: undefined,
+      bot_id: undefined,
       method: undefined,
       outcome: "INTERNAL_ERROR",
       upstream_status: undefined,

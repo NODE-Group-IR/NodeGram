@@ -59,7 +59,7 @@ describe("branch coverage extras", () => {
       timestamp: new Date().toISOString(),
       request_id: "r",
       client_ref: undefined,
-      bot_alias: undefined,
+      bot_id: undefined,
       method: undefined,
       outcome: "HEALTH",
       upstream_status: undefined,

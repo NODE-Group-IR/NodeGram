@@ -65,12 +65,16 @@ function parseKeyDigests(raw: unknown): Buffer[] | null {
   return digests;
 }
 
+/** Optional legacy field; callers now supply tokens per request. Empty/omitted is allowed. */
 function parseBots(raw: unknown): Map<string, string> | null {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+  if (raw === undefined || raw === null) {
+    return new Map();
+  }
+  if (typeof raw !== "object" || Array.isArray(raw)) {
     return null;
   }
   const entries = Object.entries(raw as Record<string, unknown>);
-  if (entries.length < 1 || entries.length > MAX_BOTS_PER_CLIENT) {
+  if (entries.length > MAX_BOTS_PER_CLIENT) {
     return null;
   }
   const bots = new Map<string, string>();

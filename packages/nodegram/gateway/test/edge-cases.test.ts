@@ -115,12 +115,11 @@ describe("config edge cases", () => {
           {
             id: "ok",
             keySha256: TEST_KEY_HASH,
-            bots: {},
             enabled: true,
           },
         ],
       }),
-    ).toBeNull();
+    ).not.toBeNull();
   });
 
   it("loads runtime settings with caps and CORS origins", () => {
@@ -171,26 +170,32 @@ describe("request helpers", () => {
   });
 
   it("rejects params arrays at top level and huge string keys", () => {
-    expect(validateRelayEnvelope({ bot: "notifications", method: "getMe", params: [] }).ok).toBe(
-      false,
-    );
     expect(
       validateRelayEnvelope({
-        bot: "notifications",
+        token: "123456789:AAFakeTokenForUnitTestsOnlyXX",
+        method: "getMe",
+        params: [],
+      }).ok,
+    ).toBe(false);
+    expect(
+      validateRelayEnvelope({
+        token: "123456789:AAFakeTokenForUnitTestsOnlyXX",
         method: "getMe",
         params: { ["k".repeat(300)]: "v" },
       }).ok,
     ).toBe(false);
     expect(
       validateRelayEnvelope({
-        bot: "notifications",
+        token: "123456789:AAFakeTokenForUnitTestsOnlyXX",
         method: "getMe",
         params: { text: "x".repeat(70_000) },
       }).ok,
     ).toBe(false);
     expect(
       validateRelayEnvelope(
-        JSON.parse('{"__proto__":{"x":1},"bot":"notifications","method":"getMe"}'),
+        JSON.parse(
+          '{"__proto__":{"x":1},"token":"123456789:AAFakeTokenForUnitTestsOnlyXX","method":"getMe"}',
+        ),
       ).ok,
     ).toBe(false);
   });
@@ -348,7 +353,7 @@ describe("handler edge cases", () => {
       timestamp: new Date().toISOString(),
       request_id: "r1",
       client_ref: "c1",
-      bot_alias: "notifications",
+      bot_id: "123456789",
       method: "getMe",
       outcome: "OK",
       upstream_status: 200,

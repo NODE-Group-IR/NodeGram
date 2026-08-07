@@ -13,16 +13,17 @@ import urllib.request
 def main() -> int:
     url = os.environ.get("NODEGRAM_URL")
     key = os.environ.get("NODEGRAM_API_KEY")
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_TEST_CHAT_ID")
-    if not url or not key or not chat_id:
+    if not url or not key or not token or not chat_id:
         print(
-            "Set NODEGRAM_URL, NODEGRAM_API_KEY, and TELEGRAM_TEST_CHAT_ID",
+            "Set NODEGRAM_URL, NODEGRAM_API_KEY, TELEGRAM_BOT_TOKEN, and TELEGRAM_TEST_CHAT_ID",
             file=sys.stderr,
         )
         return 1
 
     payload = {
-        "bot": "notifications",
+        "token": token,
         "method": "sendMessage",
         "params": {"chat_id": chat_id, "text": "Hello from NodeGram"},
     }

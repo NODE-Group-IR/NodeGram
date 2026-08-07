@@ -1,6 +1,6 @@
 # NodeGram
 
-![NodeGram cover](brand/cover.svg)
+![NodeGram cover](brand/cover.png)
 
 **A secure, serverless Telegram Bot API gateway for networks that cannot reach Telegram directly.**
 
@@ -8,7 +8,7 @@
 [![DigitalOcean Functions](https://img.shields.io/badge/DigitalOcean-Functions-0080FF)](https://www.digitalocean.com/products/functions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E.svg)](LICENSE)
 
-NodeGram lets an application call a small authenticated gateway hosted on DigitalOcean Functions. The gateway validates the caller, selects an approved bot credential, forwards the request to the official Telegram Bot API, and returns Telegram's response. It is designed for teams whose application servers cannot connect to `api.telegram.org` directly.
+NodeGram lets an application call a small authenticated gateway hosted on DigitalOcean Functions. The gateway validates the caller, accepts that caller's Telegram bot token on each request, forwards the call to the official Telegram Bot API, and returns Telegram's response. It is designed for teams whose application servers cannot connect to `api.telegram.org` directly.
 
 NodeGram is an open-source project by [NODE Group](https://www.nodegroup.ir/).
 
@@ -18,8 +18,8 @@ NodeGram is an open-source project by [NODE Group](https://www.nodegroup.ir/).
 ## Why NodeGram?
 
 - One small HTTPS endpoint reachable by your application servers
-- Multi-project access with separate revocable client keys
-- Bot tokens stay in the gateway's secret configuration, not in application requests
+- Each caller sends their own Telegram bot token per request
+- Multi-project access with separate revocable gateway client keys
 - Fixed upstream origin prevents SSRF and open-proxy abuse
 - Compatible with any language that can send an HTTPS POST
 - Stateless and inexpensive at low or irregular traffic volumes
@@ -29,11 +29,12 @@ NodeGram is an open-source project by [NODE Group](https://www.nodegroup.ir/).
 
 ```mermaid
 flowchart LR
-    A["Application server"] -->|"HTTPS + client key"| B["NodeGram function"]
-    B --> C{"Authenticate + resolve bot alias"}
-    C -->|"Allowed"| D["api.telegram.org"]
-    C -->|"Denied"| E["401 / 403"]
-    D -->|"Telegram JSON"| B
+    A["Application server"] -->|"HTTPS + gateway key + bot token"| B["NodeGram function"]
+    B --> C{"Authenticate gateway key"}
+    C -->|"Allowed"| D["Validate token + method"]
+    D --> E["api.telegram.org"]
+    C -->|"Denied"| F["401"]
+    E -->|"Telegram JSON"| B
     B -->|"Sanitized response"| A
 ```
 
@@ -41,7 +42,7 @@ The client sends a request envelope to one Function URL:
 
 ```json
 {
-  "bot": "notifications",
+  "token": "123456789:AA...your_bot_token...",
   "method": "sendMessage",
   "params": {
     "chat_id": "123456789",
@@ -50,34 +51,33 @@ The client sends a request envelope to one Function URL:
 }
 ```
 
-The request includes `Authorization: Bearer ng_live_...`. The gateway hashes the supplied key, performs a constant-time comparison with configured hashes, confirms that the selected bot alias belongs to that client, then sends:
+The request includes `Authorization: Bearer ng_live_...` (gateway access key). Each call also includes that caller's Telegram bot `token`, so every app can use its own bot. The gateway validates the access key, validates the token shape, then sends:
 
 ```text
-POST https://api.telegram.org/bot<resolved-token>/<method>
+POST https://api.telegram.org/bot<token>/<method>
 ```
 
-The bot token is never accepted in a URL, query string, request body, or log.
+Bot tokens must not appear in the URL path or query string of the NodeGram request, and are never written to logs.
 
-## Scope of v1
+## Scope of v1.1
 
 ### Supported
 
 - Official Telegram Bot API methods with valid method names
+- Per-request Telegram bot tokens (each caller uses their own bot)
 - JSON parameters
-- `application/x-www-form-urlencoded` when useful internally
 - Existing Telegram `file_id` values
 - Public HTTPS media URLs accepted by Telegram
 - Short polling with `getUpdates` (`timeout` should remain at or below the configured gateway timeout)
-- Multiple clients and multiple named bot aliases per client
+- Multiple gateway client keys (revocable access to the Function)
 - `POST` requests to one gateway endpoint
 
 ### Deliberately unsupported
 
 - MTProto, Telegram user accounts, SOCKS/HTTP proxying, or arbitrary upstream URLs
-- Passing bot tokens from callers
-- Multipart binary uploads in v1
+- Multipart binary uploads
 - Proxying file downloads from Telegram
-- Webhook receiving/forwarding in v1
+- Webhook receiving/forwarding
 - Guaranteed distributed per-client rate limiting without an external shared store
 
 DigitalOcean Functions currently limits input parameters and result responses to **1 MB**. Base64/raw-body handling can further reduce usable binary capacity. Use a Telegram `file_id` or a public HTTPS URL for media. If large binary transfer or webhook fan-out becomes a requirement, deploy a separate streaming service on DigitalOcean App Platform rather than weakening this Function design. See [DigitalOcean Functions limits](https://docs.digitalocean.com/products/functions/details/limits/).
@@ -95,11 +95,11 @@ Content-Type: application/json
 
 Body:
 
-| Field    | Type   | Required | Rules                                          |
-| -------- | ------ | -------- | ---------------------------------------------- |
-| `bot`    | string | Yes      | Configured alias; `^[a-z0-9][a-z0-9_-]{0,47}$` |
-| `method` | string | Yes      | Telegram method; `^[A-Za-z][A-Za-z0-9]{0,63}$` |
-| `params` | object | No       | JSON object, default `{}`                      |
+| Field    | Type   | Required | Rules                                                               |
+| -------- | ------ | -------- | ------------------------------------------------------------------- |
+| `token`  | string | Yes      | Telegram bot token; shape `digits:secret` (validated, never logged) |
+| `method` | string | Yes      | Telegram method; `^[A-Za-z][A-Za-z0-9]{0,63}$`                      |
+| `params` | object | No       | JSON object, default `{}`                                           |
 
 Success returns Telegram's JSON body and HTTP status. NodeGram-generated errors use this shape:
 
@@ -121,7 +121,7 @@ Required status behavior:
 | `200`  | Telegram accepted the request; inspect Telegram's `ok` field |
 | `400`  | Invalid NodeGram request envelope                            |
 | `401`  | Missing or invalid client key                                |
-| `403`  | Client is not allowed to use that bot alias                  |
+| `403`  | Authenticated client is not allowed to perform this action   |
 | `405`  | Method other than `POST`                                     |
 | `413`  | Request exceeds NodeGram's conservative payload limit        |
 | `429`  | Local best-effort throttle or Telegram rate limit            |
@@ -130,7 +130,7 @@ Required status behavior:
 
 ### `GET /?health=1` — health check
 
-Returns build/version information without checking Telegram or revealing configuration. Do not expose client IDs, aliases, token fragments, or secret fingerprints.
+Returns build/version information without checking Telegram or revealing configuration. Do not expose client IDs, token fragments, or secret fingerprints.
 
 ## Client examples
 
@@ -139,6 +139,7 @@ Set these values on the application server:
 ```bash
 export NODEGRAM_URL="https://example.doserverless.co/api/v1/web/.../nodegram/gateway"
 export NODEGRAM_API_KEY="ng_live_replace_me"
+export TELEGRAM_BOT_TOKEN="123456789:AA...your_bot_token..."
 ```
 
 ### cURL
@@ -147,11 +148,11 @@ export NODEGRAM_API_KEY="ng_live_replace_me"
 curl --request POST "$NODEGRAM_URL" \
   --header "Authorization: Bearer $NODEGRAM_API_KEY" \
   --header "Content-Type: application/json" \
-  --data '{
-    "bot": "notifications",
-    "method": "sendMessage",
-    "params": {"chat_id": "123456789", "text": "Hello from NodeGram"}
-  }'
+  --data "{
+    \"token\": \"$TELEGRAM_BOT_TOKEN\",
+    \"method\": \"sendMessage\",
+    \"params\": {\"chat_id\": \"123456789\", \"text\": \"Hello from NodeGram\"}
+  }"
 ```
 
 ### Node.js / TypeScript
@@ -164,7 +165,7 @@ const response = await fetch(process.env.NODEGRAM_URL!, {
     "content-type": "application/json",
   },
   body: JSON.stringify({
-    bot: "notifications",
+    token: process.env.TELEGRAM_BOT_TOKEN,
     method: "sendMessage",
     params: { chat_id: "123456789", text: "Hello from NodeGram" },
   }),
@@ -179,7 +180,7 @@ if (!response.ok || !result.ok) throw new Error(JSON.stringify(result));
 ```php
 <?php
 $payload = json_encode([
-    'bot' => 'notifications',
+    'token' => getenv('TELEGRAM_BOT_TOKEN'),
     'method' => 'sendMessage',
     'params' => ['chat_id' => '123456789', 'text' => 'Hello from NodeGram'],
 ]);
@@ -209,7 +210,7 @@ response = requests.post(
     os.environ["NODEGRAM_URL"],
     headers={"Authorization": f"Bearer {os.environ['NODEGRAM_API_KEY']}"},
     json={
-        "bot": "notifications",
+        "token": os.environ["TELEGRAM_BOT_TOKEN"],
         "method": "sendMessage",
         "params": {"chat_id": "123456789", "text": "Hello from NodeGram"},
     },
@@ -223,7 +224,7 @@ print(response.json())
 
 NodeGram reads a base64-encoded JSON document from `NODEGRAM_CLIENTS_B64`. Base64 prevents quoting mistakes; **it is not encryption**. Store the variable as an encrypted secret in the deployment environment and never commit the real value.
 
-Decoded structure:
+Decoded structure (gateway access keys only — Telegram bot tokens are sent per request by callers):
 
 ```json
 {
@@ -232,16 +233,13 @@ Decoded structure:
     {
       "id": "website-production",
       "keySha256": "64-lowercase-hex-characters",
-      "bots": {
-        "notifications": "123456789:telegram_bot_token"
-      },
       "enabled": true
     }
   ]
 }
 ```
 
-Generate a client key and hash locally using the repository CLI that Cursor will implement:
+Generate a gateway client key and hash:
 
 ```bash
 npm run keygen
@@ -256,9 +254,10 @@ node scripts/encode-config.mjs config/clients.local.json
 
 Operational rules:
 
-- Give each environment/project its own client key.
+- Give each environment/project its own gateway client key.
 - Store only SHA-256 client-key hashes in gateway configuration.
-- Rotate a compromised key immediately; accept two hashes temporarily during planned rotation if needed.
+- Each application keeps its own Telegram bot token and sends it in the JSON body as `token`.
+- Rotate a compromised gateway key immediately; accept two hashes temporarily during planned rotation if needed.
 - Never log authorization headers, config, bot tokens, bodies, chat IDs, messages, or upstream URLs containing tokens.
 - Keep `.env`, `clients.local.json`, and all generated secrets out of Git.
 
@@ -315,7 +314,7 @@ The `project.yml` must configure `web: raw`, `runtime: nodejs:22`, a conservativ
 
 ### 6. Smoke test
 
-Call the health endpoint first, then `getMe` through an approved bot alias, and finally `sendMessage` to a private test chat. Do not test using production chat IDs before verifying configuration.
+Call the health endpoint first, then `getMe` with your bot token in the body, and finally `sendMessage` to a private test chat. Do not test using production chat IDs before verifying configuration.
 
 ## Recommended repository structure
 
@@ -348,8 +347,8 @@ Call the health endpoint first, then `getMe` through an approved bot alias, and 
 | --------------------- | ---------------------------------------------------------------------------------------------------------- |
 | Open proxy / SSRF     | Hard-code `https://api.telegram.org`; never accept a host, URL, protocol, redirect target, or port         |
 | Stolen client key     | Store only key hashes; constant-time compare; separate keys; easy rotation                                 |
-| Bot-token exposure    | Resolve tokens from secret config; redact logs/errors; never put tokens in client URLs                     |
-| Cross-tenant access   | Resolve the authenticated client first; aliases exist only inside that client's bot map                    |
+| Bot-token exposure    | Tokens transit only over HTTPS; never log tokens or put them in NodeGram URLs/query strings                |
+| Open anonymous relay  | Require a revocable gateway Bearer key; reject missing/invalid keys with 401                               |
 | Oversized payload     | Reject using both declared length and decoded byte length before upstream fetch                            |
 | Hanging upstream      | AbortController timeout capped below Function deadline                                                     |
 | Redirect attack       | `redirect: "error"` on upstream fetch                                                                      |
@@ -366,7 +365,7 @@ Emit one structured JSON log per request containing only:
 - timestamp
 - request ID
 - anonymized client ID or stable non-secret hash
-- bot alias (optional and configurable)
+- numeric bot id only when `NODEGRAM_LOG_BOT_ALIAS=true` (never the token secret)
 - Telegram method
 - NodeGram outcome code
 - upstream status
@@ -386,8 +385,9 @@ Never log request bodies, response bodies, chat IDs, message text, authorization
 
 ## Roadmap
 
-- v1: authenticated JSON gateway, multi-client aliases, tests, deployment workflow
-- v1.1: small official client package and usage metrics without sensitive content
+- v1: authenticated JSON gateway, tests, deployment workflow
+- v1.1: per-request Telegram bot tokens so each caller uses their own bot
+- v1.2 candidate: small official client package and usage metrics without sensitive content
 - v2 candidate: optional shared rate-limit store and admin configuration service
 - Separate service candidate: webhook forwarding and streamed media, hosted on App Platform—not Functions
 

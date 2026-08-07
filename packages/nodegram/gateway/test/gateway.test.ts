@@ -14,6 +14,7 @@ import { TELEGRAM_API_ORIGIN } from "../src/domain.js";
 import {
   DISABLED_KEY,
   FAKE_BOT_TOKEN,
+  OTHER_FAKE_BOT_TOKEN,
   OTHER_KEY,
   TEST_KEY,
   TEST_KEY_HASH,
@@ -149,36 +150,36 @@ describe("authentication", () => {
     expect(disabled.statusCode).toBe(401);
   });
 
-  it("denies cross-tenant bot alias without revealing existence", async () => {
+  it("forwards the caller-supplied bot token and rejects legacy bot alias field", async () => {
     const env = testEnv();
-    const fetchImpl = mockFetchJson(200, { ok: true });
+    let calledUrl = "";
+    const fetchImpl = (async (url: string | URL | Request) => {
+      calledUrl = String(url);
+      return new Response(JSON.stringify({ ok: true, result: {} }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
 
-    // other-tenant owns notifications with different token; website-production also has notifications
-    // Cross-tenant: website-production asking for alias that only exists on other tenant
     const res = await handleRequest(
       rawEvent({
-        body: relayBody({ bot: "only-other" }),
-        headers: { authorization: `Bearer ${TEST_KEY}` },
-      }),
-      {},
-      { env, fetchImpl },
-    );
-    expect(res.statusCode).toBe(403);
-    expect(res.body).toMatchObject({
-      ok: false,
-      error: { code: "FORBIDDEN" },
-    });
-
-    // other tenant cannot use website-production's "alerts"
-    const res2 = await handleRequest(
-      rawEvent({
-        body: relayBody({ bot: "alerts" }),
+        body: relayBody({ token: OTHER_FAKE_BOT_TOKEN, method: "getMe", params: {} }),
         headers: { authorization: `Bearer ${OTHER_KEY}` },
       }),
-      {},
+      { getRemainingTimeInMillis: () => 25_000 },
       { env, fetchImpl },
     );
-    expect(res2.statusCode).toBe(403);
+    expect(res.statusCode).toBe(200);
+    expect(calledUrl).toBe(`${TELEGRAM_API_ORIGIN}/bot${OTHER_FAKE_BOT_TOKEN}/getMe`);
+
+    const legacy = await handleRequest(
+      rawEvent({
+        body: { bot: "notifications", method: "getMe", params: {} },
+      }),
+      {},
+      { env, fetchImpl: mockFetchJson(200, { ok: true }) },
+    );
+    expect(legacy.statusCode).toBe(400);
   });
 
   it("runs constant-time path including malformed keys", () => {
@@ -221,12 +222,12 @@ describe("request validation", () => {
     const arrayBody = await handleRequest(rawEvent({ rawBody: "[]" }), {}, { env, fetchImpl });
     expect(arrayBody.statusCode).toBe(400);
 
-    const badBot = await handleRequest(
-      rawEvent({ body: relayBody({ bot: "Bad_Alias" }) }),
+    const badToken = await handleRequest(
+      rawEvent({ body: relayBody({ token: "not-a-token" }) }),
       {},
       { env, fetchImpl },
     );
-    expect(badBot.statusCode).toBe(400);
+    expect(badToken.statusCode).toBe(400);
 
     const badMethod = await handleRequest(
       rawEvent({ body: relayBody({ method: "send message" }) }),
@@ -272,9 +273,13 @@ describe("request validation", () => {
       );
       expect(res.statusCode).toBe(400);
     }
-    for (const bot of ["../notifications", "n/oti", "n%2foti", "bot\ralias"]) {
+    for (const token of [
+      "123/456:AAFakeTokenForUnitTestsOnlyXX",
+      "123456789:AAFake?TokenForUnitTestsOnly",
+      "badtoken",
+    ]) {
       const res = await handleRequest(
-        rawEvent({ body: relayBody({ bot }) }),
+        rawEvent({ body: relayBody({ token }) }),
         {},
         { env, fetchImpl },
       );
@@ -289,7 +294,7 @@ describe("request validation", () => {
     const polluted = await handleRequest(
       rawEvent({
         rawBody:
-          '{"bot":"notifications","method":"sendMessage","params":{"__proto__":{"admin":true}}}',
+          '{"token":"123456789:AAFakeTokenForUnitTestsOnlyXX","method":"sendMessage","params":{"__proto__":{"admin":true}}}',
       }),
       {},
       { env, fetchImpl },
@@ -299,7 +304,7 @@ describe("request validation", () => {
     const constructorKey = await handleRequest(
       rawEvent({
         rawBody:
-          '{"bot":"notifications","method":"sendMessage","params":{"nested":{"constructor":{"prototype":{}}}}}',
+          '{"token":"123456789:AAFakeTokenForUnitTestsOnlyXX","method":"sendMessage","params":{"nested":{"constructor":{"prototype":{}}}}}',
       }),
       {},
       { env, fetchImpl },
@@ -312,7 +317,7 @@ describe("request validation", () => {
     }
     const nested = await handleRequest(
       rawEvent({
-        body: { bot: "notifications", method: "sendMessage", params: deep },
+        body: { token: FAKE_BOT_TOKEN, method: "sendMessage", params: deep },
       }),
       {},
       { env, fetchImpl },
@@ -542,7 +547,7 @@ describe("health and CORS", () => {
     const body = res.body as Record<string, unknown>;
     expect(body.ok).toBe(true);
     expect(body.service).toBe("nodegram");
-    expect(body.version).toBe("1.0.0");
+    expect(body.version).toBe("1.1.0");
     expect(body.build).toBe("test-build");
     const serialized = JSON.stringify(body);
     expect(serialized).not.toContain(TEST_KEY);
@@ -630,7 +635,7 @@ describe("logging redaction", () => {
       await handleRequest(
         rawEvent({
           body: relayBody({
-            params: { chat_id: "123456789", text: "SECRET_MESSAGE_TEXT" },
+            params: { chat_id: "555666777", text: "SECRET_MESSAGE_TEXT" },
           }),
         }),
         { getRemainingTimeInMillis: () => 25_000 },
@@ -643,13 +648,14 @@ describe("logging redaction", () => {
       const joined = lines.join("\n");
       expect(joined).not.toContain(TEST_KEY);
       expect(joined).not.toContain(FAKE_BOT_TOKEN);
+      expect(joined).not.toContain("AAFakeTokenForUnitTestsOnlyXX");
       expect(joined).not.toContain("SECRET_MESSAGE_TEXT");
-      expect(joined).not.toContain("123456789");
+      expect(joined).not.toContain("555666777");
       expect(joined).not.toContain(TEST_KEY_HASH);
       expect(joined).not.toContain(`${TELEGRAM_API_ORIGIN}/bot`);
       const parsed = JSON.parse(lines[0]!);
       expect(parsed.outcome).toBe("OK");
-      expect(parsed.bot_alias).toBe("notifications");
+      expect(parsed.bot_id).toBe("123456789");
       expect(parsed.method).toBe("sendMessage");
     } finally {
       restore();
@@ -687,7 +693,7 @@ describe("DigitalOcean raw fixtures", () => {
             "X-Request-Id": "fixture-request-id-001",
           },
           body: Buffer.from(
-            JSON.stringify({ bot: "notifications", method: "getMe", params: {} }),
+            JSON.stringify({ token: FAKE_BOT_TOKEN, method: "getMe", params: {} }),
             "utf8",
           ).toString("base64"),
           isBase64Encoded: true,

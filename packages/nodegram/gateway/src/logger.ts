@@ -2,7 +2,8 @@ export interface CompletionLog {
   timestamp: string;
   request_id: string;
   client_ref: string | undefined;
-  bot_alias: string | undefined;
+  /** Numeric Telegram bot id only (never the secret token suffix). */
+  bot_id: string | undefined;
   method: string | undefined;
   outcome: string;
   upstream_status: number | undefined;
@@ -32,8 +33,8 @@ export function writeCompletionLog(entry: CompletionLog): void {
   if (entry.client_ref !== undefined) {
     payload.client_ref = entry.client_ref;
   }
-  if (entry.bot_alias !== undefined) {
-    payload.bot_alias = entry.bot_alias;
+  if (entry.bot_id !== undefined) {
+    payload.bot_id = entry.bot_id;
   }
   if (entry.method !== undefined) {
     payload.method = entry.method;

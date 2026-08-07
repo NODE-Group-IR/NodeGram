@@ -1,5 +1,5 @@
 import {
-  BOT_ALIAS_RE,
+  BOT_TOKEN_RE,
   DANGEROUS_KEYS,
   MAX_JSON_DEPTH,
   MAX_JSON_KEYS,
@@ -107,9 +107,18 @@ export function validateRelayEnvelope(body: unknown): ParseResult {
     }
   }
 
-  const { bot, method, params } = body;
+  // Reject legacy alias field so callers migrate to per-request tokens.
+  if ("bot" in body) {
+    return { ok: false, code: "INVALID_REQUEST" };
+  }
 
-  if (typeof bot !== "string" || !BOT_ALIAS_RE.test(bot)) {
+  const { token, method, params } = body;
+
+  if (typeof token !== "string" || !BOT_TOKEN_RE.test(token)) {
+    return { ok: false, code: "INVALID_REQUEST" };
+  }
+  // Defense in depth before URL construction
+  if (token.includes("/") || token.includes("?") || token.includes("#") || token.includes("\n")) {
     return { ok: false, code: "INVALID_REQUEST" };
   }
   if (typeof method !== "string" || !METHOD_RE.test(method)) {
@@ -130,7 +139,7 @@ export function validateRelayEnvelope(body: unknown): ParseResult {
 
   return {
     ok: true,
-    envelope: { bot, method, params: resolvedParams },
+    envelope: { token, method, params: resolvedParams },
   };
 }
 

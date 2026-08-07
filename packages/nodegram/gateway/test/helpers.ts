@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import type { GatewayConfig } from "../src/domain.js";
+import { setLogSinkForTests } from "../src/logger.js";
+import { validateClientsDocument } from "../src/config.js";
 
 export const TEST_KEY = "ng_live_test_key_abcdefghijklmnopqrstuvwxyz12";
 export const TEST_KEY_HASH = createHash("sha256").update(TEST_KEY, "utf8").digest("hex");
@@ -12,6 +14,7 @@ export const DISABLED_KEY_HASH = createHash("sha256").update(DISABLED_KEY, "utf8
 
 /** Placeholder token shape — not a live credential. */
 export const FAKE_BOT_TOKEN = "123456789:AAFakeTokenForUnitTestsOnlyXX";
+export const OTHER_FAKE_BOT_TOKEN = "987654321:AAAnotherFakeTokenForTestsOnlyY";
 
 export function makeClientsDoc(overrides?: { clients?: unknown[] }): Record<string, unknown> {
   return {
@@ -20,26 +23,16 @@ export function makeClientsDoc(overrides?: { clients?: unknown[] }): Record<stri
       {
         id: "website-production",
         keySha256: TEST_KEY_HASH,
-        bots: {
-          notifications: FAKE_BOT_TOKEN,
-          alerts: "987654321:AAAnotherFakeTokenForTestsOnlyY",
-        },
         enabled: true,
       },
       {
         id: "other-tenant",
         keySha256: OTHER_KEY_HASH,
-        bots: {
-          notifications: "111111111:AAOtherTenantFakeTokenOnlyZZZZ",
-        },
         enabled: true,
       },
       {
         id: "disabled-client",
         keySha256: DISABLED_KEY_HASH,
-        bots: {
-          notifications: FAKE_BOT_TOKEN,
-        },
         enabled: false,
       },
     ],
@@ -101,10 +94,10 @@ export function rawEvent(opts: {
 }
 
 export function relayBody(
-  partial: Partial<{ bot: string; method: string; params: Record<string, unknown> }> = {},
+  partial: Partial<{ token: string; method: string; params: Record<string, unknown> }> = {},
 ): Record<string, unknown> {
   return {
-    bot: "notifications",
+    token: FAKE_BOT_TOKEN,
     method: "sendMessage",
     params: { chat_id: "123456789", text: "Hello from NodeGram" },
     ...partial,
@@ -123,9 +116,6 @@ export function mockFetchJson(
     });
   }) as typeof fetch;
 }
-
-import { setLogSinkForTests } from "../src/logger.js";
-import { validateClientsDocument } from "../src/config.js";
 
 export function captureLogs(): { lines: string[]; restore: () => void } {
   const lines: string[] = [];

@@ -78,10 +78,10 @@ Expect `"ok": true` with service/version only.
 curl --request POST "$NODEGRAM_URL" \
   --header "Authorization: Bearer $NODEGRAM_API_KEY" \
   --header "Content-Type: application/json" \
-  --data '{"bot":"notifications","method":"getMe","params":{}}'
+  --data "{\"token\":\"$TELEGRAM_BOT_TOKEN\",\"method\":\"getMe\",\"params\":{}}"
 ```
 
-Then `sendMessage` to a **private test chat** only.
+Then `sendMessage` to a **private test chat** only (include the same `token` field).
 
 ## 7. Activation logs
 
@@ -98,7 +98,7 @@ Logs must never contain tokens, keys, chat IDs, or message text.
 1. `npm run keygen` for a new key.
 2. Add the new hash as a second `keySha256` entry (array of two).
 3. Redeploy; migrate callers; remove the old hash; redeploy again.
-4. For bots: add a new alias or replace the token value in config, redeploy, update callers.
+4. For bots: each app rotates its own `TELEGRAM_BOT_TOKEN` locally — no Function redeploy required.
 
 ## 9. Rollback / redeploy
 
@@ -116,7 +116,7 @@ doctl serverless deploy . --remote-build
 | --------------------- | --------------------------------------------------------------------------------------- |
 | `CONFIGURATION_ERROR` | `NODEGRAM_CLIENTS_B64` present, valid base64 JSON, schemaVersion 1                      |
 | `UNAUTHORIZED`        | Bearer key matches a configured hash; client `enabled: true`                            |
-| `FORBIDDEN`           | Alias exists under **that** client's `bots` map                                         |
+| `FORBIDDEN`           | Authenticated client not allowed for this action                                        |
 | `504` / timeouts      | Lower Telegram `timeout` for `getUpdates`; raise Function timeout only within DO limits |
 | `413`                 | Payload under 750 KiB default / 900 KiB hard cap; remember 1 MB platform limit          |
 | CORS failures         | Exact HTTPS origin in `NODEGRAM_ALLOWED_ORIGINS`                                        |

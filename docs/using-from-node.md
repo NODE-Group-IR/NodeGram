@@ -3,6 +3,7 @@
 ```bash
 export NODEGRAM_URL="https://example.doserverless.co/api/v1/web/<namespace>/nodegram/gateway"
 export NODEGRAM_API_KEY="ng_live_replace_me"
+export TELEGRAM_BOT_TOKEN="123456789:AA...your_bot_token..."
 ```
 
 ```js
@@ -13,7 +14,7 @@ const response = await fetch(process.env.NODEGRAM_URL, {
     "content-type": "application/json",
   },
   body: JSON.stringify({
-    bot: "notifications",
+    token: process.env.TELEGRAM_BOT_TOKEN,
     method: "sendMessage",
     params: { chat_id: process.env.TELEGRAM_TEST_CHAT_ID, text: "Hello from NodeGram" },
   }),

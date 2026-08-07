@@ -24,8 +24,10 @@ if ! command -v doctl >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Deploying with doctl serverless deploy . --remote-build"
-doctl serverless deploy . --remote-build
+# Prefer local artifact deploy: bundle.js is already built by npm run check.
+# Remote build also works now that esbuild is declared in the function package.json.
+echo "==> Deploying with doctl serverless deploy ."
+doctl serverless deploy .
 
 echo "==> Function URL:"
 doctl serverless functions get nodegram/gateway --url || true

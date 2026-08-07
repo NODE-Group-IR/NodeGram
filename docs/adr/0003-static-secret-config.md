@@ -1,22 +1,19 @@
-# ADR 0003: Static secret configuration
+# ADR 0003: Static secret config for gateway keys
 
 ## Status
 
-Accepted (v1)
+Accepted (updated in v1.1)
 
 ## Context
 
-v1 must be deployable with minimal moving parts: no database, no control-plane service, and fast cold starts. Operators already manage DigitalOcean encrypted environment variables / `.env` for `doctl`.
+v1 must be deployable with minimal moving parts. Gateway access control still needs revocable keys, but Telegram bot tokens should not require a Function redeploy for every new bot.
 
 ## Decision
 
-Client key hashes and bot tokens are supplied as a base64-encoded JSON document in `NODEGRAM_CLIENTS_B64`. The Function decodes, validates, deep-freezes, and caches the document per warm instance.
-
-Base64 avoids shell quoting mistakes; it is **not** encryption. Encryption is provided by the platform secret store.
+`NODEGRAM_CLIENTS_B64` stores only gateway client key **hashes** (and optional metadata). Telegram bot tokens are supplied by callers on each request. Base64 avoids shell quoting mistakes; it is **not** encryption.
 
 ## Consequences
 
-- Simple operations and low supply-chain risk
-- Config changes require redeploy (or secret update + cold start)
-- Path to a shared control plane (v2 candidate): replace `loadGatewayConfig` with a signed fetch from an admin service while keeping the same runtime `GatewayConfig` shape
-- Rotation uses one or two `keySha256` values per client without a database
+- Adding a new bot does not require changing Function secrets — only the calling app's env.
+- Compromised gateway keys are rotated via hash updates + redeploy.
+- Path to a shared control plane remains: replace `loadGatewayConfig` while keeping the same runtime shape.

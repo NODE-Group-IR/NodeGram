@@ -1,16 +1,23 @@
 {
   "name": "nodegram",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "Secure serverless Telegram Bot API gateway by NODE Group",
+  "description": "Secure serverless Telegram Bot API gateway — “Telegram reaches your code.”",
   "license": "MIT",
   "type": "module",
   "author": "NODE Group",
   "homepage": "https://www.nodegroup.ir/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nodegroup/nodegram.git"
+    "url": "https://github.com/NODE-Group-IR/NodeGram.git"
   },
+  "keywords": [
+    "telegram",
+    "bot-api",
+    "digitalocean",
+    "serverless",
+    "nodejs"
+  ],
   "engines": {
     "node": ">=22 <26"
   },

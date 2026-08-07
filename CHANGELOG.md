@@ -2,6 +2,14 @@
 
 All notable changes to NodeGram are documented in this file.
 
+## [1.1.0] — 2026-08-07
+
+### Changed
+
+- Relay body now requires per-request Telegram `token` so every caller can use their own bot
+- Gateway config (`NODEGRAM_CLIENTS_B64`) stores only client key hashes; bot aliases are no longer required
+- Legacy `bot` alias field is rejected
+
 ## [1.0.0] — 2026-08-07
 
 ### Added

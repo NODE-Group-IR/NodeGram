@@ -4,15 +4,16 @@
  */
 $url = getenv('NODEGRAM_URL');
 $key = getenv('NODEGRAM_API_KEY');
+$token = getenv('TELEGRAM_BOT_TOKEN');
 $chatId = getenv('TELEGRAM_TEST_CHAT_ID');
 
-if (!$url || !$key || !$chatId) {
-    fwrite(STDERR, "Set NODEGRAM_URL, NODEGRAM_API_KEY, and TELEGRAM_TEST_CHAT_ID\n");
+if (!$url || !$key || !$token || !$chatId) {
+    fwrite(STDERR, "Set NODEGRAM_URL, NODEGRAM_API_KEY, TELEGRAM_BOT_TOKEN, and TELEGRAM_TEST_CHAT_ID\n");
     exit(1);
 }
 
 $payload = json_encode([
-    'bot' => 'notifications',
+    'token' => $token,
     'method' => 'sendMessage',
     'params' => ['chat_id' => $chatId, 'text' => 'Hello from NodeGram'],
 ]);

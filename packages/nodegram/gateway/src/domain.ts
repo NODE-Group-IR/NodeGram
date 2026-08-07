@@ -22,7 +22,8 @@ export interface NodeGramErrorBody {
 }
 
 export interface RelayEnvelope {
-  bot: string;
+  /** Telegram bot token supplied by the caller on every request. */
+  token: string;
   method: string;
   params: Record<string, unknown>;
 }
@@ -51,7 +52,7 @@ export interface RuntimeSettings {
 }
 
 export const SERVICE_NAME = "nodegram";
-export const SERVICE_VERSION = "1.0.0";
+export const SERVICE_VERSION = "1.1.0";
 
 export const TELEGRAM_API_ORIGIN = "https://api.telegram.org";
 
@@ -81,7 +82,7 @@ export const DANGEROUS_KEYS = new Set(["__proto__", "prototype", "constructor"])
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   INVALID_REQUEST: "Invalid request",
   UNAUTHORIZED: "Invalid or missing client credentials",
-  FORBIDDEN: "Client is not allowed to use that bot alias",
+  FORBIDDEN: "Client is not allowed to perform this action",
   METHOD_NOT_ALLOWED: "Method not allowed",
   PAYLOAD_TOO_LARGE: "Request payload too large",
   UNSUPPORTED_MEDIA_TYPE: "Unsupported media type",

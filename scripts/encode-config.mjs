@@ -62,12 +62,13 @@ for (const c of doc.clients) {
     if (typeof h !== "string" || !HASH.test(h)) fail("invalid keySha256");
   }
 
-  if (!c.bots || typeof c.bots !== "object" || Array.isArray(c.bots)) fail("bots map required");
-  const aliases = Object.keys(c.bots);
-  if (aliases.length < 1) fail("bots must be non-empty");
-  for (const [alias, token] of Object.entries(c.bots)) {
-    if (!ALIAS.test(alias)) fail(`invalid bot alias ${alias}`);
-    if (typeof token !== "string" || !TOKEN.test(token)) fail(`invalid token shape for ${alias}`);
+  // bots is optional/legacy — callers supply Telegram tokens per request
+  if (c.bots !== undefined && c.bots !== null) {
+    if (typeof c.bots !== "object" || Array.isArray(c.bots)) fail("bots must be an object if set");
+    for (const [alias, token] of Object.entries(c.bots)) {
+      if (!ALIAS.test(alias)) fail(`invalid bot alias ${alias}`);
+      if (typeof token !== "string" || !TOKEN.test(token)) fail(`invalid token shape for ${alias}`);
+    }
   }
   if (typeof c.enabled !== "boolean") fail("enabled must be boolean");
 }

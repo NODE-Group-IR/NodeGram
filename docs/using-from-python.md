@@ -3,6 +3,7 @@
 ```bash
 export NODEGRAM_URL="https://example.doserverless.co/api/v1/web/<namespace>/nodegram/gateway"
 export NODEGRAM_API_KEY="ng_live_replace_me"
+export TELEGRAM_BOT_TOKEN="123456789:AA...your_bot_token..."
 export TELEGRAM_TEST_CHAT_ID="123456789"
 ```
 
@@ -12,7 +13,7 @@ import urllib.request
 import json
 
 payload = {
-    "bot": "notifications",
+    "token": os.environ["TELEGRAM_BOT_TOKEN"],
     "method": "sendMessage",
     "params": {
         "chat_id": os.environ["TELEGRAM_TEST_CHAT_ID"],
