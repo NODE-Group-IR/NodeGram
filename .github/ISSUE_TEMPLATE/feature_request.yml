@@ -1,0 +1,23 @@
+name: Feature request
+description: Propose an enhancement within NodeGram's Bot API gateway scope
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This does not require arbitrary URL proxying, MTProto, or binary streaming in the Function
+          required: true

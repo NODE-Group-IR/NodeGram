@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" role="img" aria-labelledby="title desc">
+  <title id="title">NodeGram reversed logo</title>
+  <desc id="desc">Light NodeGram wordmark for dark backgrounds</desc>
+  <g transform="translate(32 32) scale(.5)">
+    <rect width="512" height="512" rx="112" fill="#0D1C2E" stroke="#1D334A" stroke-width="4"/>
+    <path d="M106 339 209 181l80 78 116-111-77 218-87-54-135 27Z" fill="none" stroke="#21C4D6" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m241 312 48-53" fill="none" stroke="#FF6B35" stroke-width="25" stroke-linecap="round"/>
+    <circle cx="106" cy="339" r="26" fill="#FF6B35"/><circle cx="209" cy="181" r="23" fill="#F7FAFC"/><circle cx="289" cy="259" r="24" fill="#FF6B35"/><circle cx="405" cy="148" r="27" fill="#F7FAFC"/><circle cx="328" cy="366" r="22" fill="#21C4D6"/>
+  </g>
+  <text x="330" y="172" fill="#F7FAFC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="116" font-weight="750" letter-spacing="-5">Node<tspan fill="#FF6B35">Gram</tspan></text>
+  <text x="338" y="230" fill="#9FB0C3" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="27" font-weight="600" letter-spacing="4">BY NODE GROUP</text>
+</svg>

@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: NodeGram
+message: If you use this software, please cite it as below.
+type: software
+authors:
+  - name: NODE Group
+    website: https://www.nodegroup.ir/
+repository-code: https://github.com/nodegroup/nodegram
+url: https://www.nodegroup.ir/
+abstract: >-
+  NodeGram is a secure serverless Telegram Bot API gateway for networks that
+  cannot reach Telegram directly. It runs on DigitalOcean Functions and
+  forwards authenticated JSON envelopes to api.telegram.org.
+keywords:
+  - Telegram
+  - Bot API
+  - DigitalOcean Functions
+  - serverless
+  - gateway
+license: MIT
+version: 1.0.0
+date-released: "2026-08-07"

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">NodeGram icon</title>
+  <desc id="desc">Connected nodes forming an abstract forward bridge</desc>
+  <rect width="512" height="512" rx="112" fill="#07111F"/>
+  <path d="M106 339 209 181l80 78 116-111-77 218-87-54-135 27Z" fill="none" stroke="#21C4D6" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m241 312 48-53" fill="none" stroke="#FF6B35" stroke-width="25" stroke-linecap="round"/>
+  <circle cx="106" cy="339" r="26" fill="#FF6B35"/>
+  <circle cx="209" cy="181" r="23" fill="#F7FAFC"/>
+  <circle cx="289" cy="259" r="24" fill="#FF6B35"/>
+  <circle cx="405" cy="148" r="27" fill="#F7FAFC"/>
+  <circle cx="328" cy="366" r="22" fill="#21C4D6"/>
+</svg>

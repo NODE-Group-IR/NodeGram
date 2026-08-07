@@ -1,0 +1,18 @@
+{
+  "name": "@nodegram/gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NodeGram DigitalOcean Functions gateway",
+  "license": "MIT",
+  "author": "NODE Group",
+  "homepage": "https://www.nodegroup.ir/",
+  "main": "bundle.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22 <26"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "clean": "rm -f bundle.js bundle.js.map"
+  }
+}

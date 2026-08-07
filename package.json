@@ -1,0 +1,45 @@
+{
+  "name": "nodegram",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure serverless Telegram Bot API gateway by NODE Group",
+  "license": "MIT",
+  "type": "module",
+  "author": "NODE Group",
+  "homepage": "https://www.nodegroup.ir/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nodegroup/nodegram.git"
+  },
+  "engines": {
+    "node": ">=22 <26"
+  },
+  "workspaces": [
+    "packages/nodegram/gateway"
+  ],
+  "scripts": {
+    "build": "npm run build -w @nodegram/gateway",
+    "clean": "npm run clean -w @nodegram/gateway",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -p packages/nodegram/gateway/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "keygen": "node scripts/keygen.mjs",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run build && node scripts/secret-scan.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "@types/node": "^22.13.10",
+    "@vitest/coverage-v8": "^3.0.8",
+    "esbuild": "^0.25.1",
+    "eslint": "^9.22.0",
+    "eslint-config-prettier": "^10.1.1",
+    "globals": "^17.9.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.1",
+    "vitest": "^3.0.8"
+  }
+}

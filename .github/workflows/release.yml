@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create release notes for (documentation only; no deploy)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create GitHub Release (no deploy)
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            ## NodeGram release
+
+            This workflow publishes GitHub release notes only.
+            It does **not** deploy to DigitalOcean.
+
+            Deploy manually after review:
+
+            ```bash
+            npm ci && npm run check
+            ./scripts/deploy.sh
+            ```
+
+            See docs/deployment-digitalocean.md.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

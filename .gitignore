@@ -1,0 +1,35 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+config/clients.local.json
+
+# Dependencies and build
+node_modules/
+packages/nodegram/gateway/bundle.js
+packages/nodegram/gateway/bundle.js.map
+packages/nodegram/gateway/dist/
+coverage/
+*.tsbuildinfo
+
+# Logs and caches
+logs/
+*.log
+.npm/
+.eslintcache
+.prettiercache
+.vitest/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Deploy tooling
+.deployed/
+.nimbella/
+doctl/

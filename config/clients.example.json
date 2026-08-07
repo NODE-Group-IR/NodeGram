@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "clients": [
+    {
+      "id": "website-production",
+      "keySha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "bots": {
+        "notifications": "000000000:EXAMPLE_BOT_TOKEN_REPLACE_ME_NOT_REAL"
+      },
+      "enabled": true
+    }
+  ]
+}
