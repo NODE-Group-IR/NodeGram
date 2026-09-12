@@ -52,7 +52,7 @@ export interface RuntimeSettings {
 }
 
 export const SERVICE_NAME = "nodegram";
-export const SERVICE_VERSION = "1.1.0";
+export const SERVICE_VERSION = "1.1.1";
 
 export const TELEGRAM_API_ORIGIN = "https://api.telegram.org";
 

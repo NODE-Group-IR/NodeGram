@@ -567,7 +567,7 @@ describe("health and CORS", () => {
     const body = res.body as Record<string, unknown>;
     expect(body.ok).toBe(true);
     expect(body.service).toBe("nodegram");
-    expect(body.version).toBe("1.1.0");
+    expect(body.version).toBe("1.1.1");
     expect(body.build).toBe("test-build");
     const serialized = JSON.stringify(body);
     expect(serialized).not.toContain(TEST_KEY);

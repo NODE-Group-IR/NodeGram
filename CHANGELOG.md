@@ -2,6 +2,12 @@
 
 All notable changes to NodeGram are documented in this file.
 
+## [1.1.1] — 2026-09-12
+
+### Fixed
+
+- Avoid polynomial ReDoS in base64 padding strip (`js/polynomial-redos` in `decodeRawBody`)
+
 ## [1.1.0] — 2026-08-07
 
 ### Changed

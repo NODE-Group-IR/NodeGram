@@ -154,8 +154,13 @@ export function decodeRawBody(
   try {
     if (isBase64Encoded) {
       const bytes = Buffer.from(body, "base64");
-      // Detect clearly invalid base64 that collapses to empty incorrectly
-      if (bytes.length === 0 && body.replace(/=+$/, "").length > 0) {
+      // Detect clearly invalid base64 that collapses to empty incorrectly.
+      // Strip trailing '=' without a regex to avoid polynomial ReDoS (js/polynomial-redos).
+      let unpaddedLength = body.length;
+      while (unpaddedLength > 0 && body.charCodeAt(unpaddedLength - 1) === 61 /* '=' */) {
+        unpaddedLength -= 1;
+      }
+      if (bytes.length === 0 && unpaddedLength > 0) {
         return { ok: false, code: "INVALID_REQUEST" };
       }
       return { ok: true, bytes };

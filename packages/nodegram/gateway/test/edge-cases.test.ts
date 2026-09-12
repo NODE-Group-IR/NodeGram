@@ -170,6 +170,12 @@ describe("request helpers", () => {
     expect(decodeRawBody("", true).ok).toBe(false);
     expect(decodeRawBody("e30=", true).ok).toBe(true);
     expect(decodeRawBody("{}", false).ok).toBe(true);
+    // Invalid base64 that collapses to empty must be rejected without regex ReDoS.
+    expect(decodeRawBody("!!!!", true).ok).toBe(false);
+    expect(decodeRawBody("=".repeat(10_000), true)).toEqual({
+      ok: true,
+      bytes: Buffer.alloc(0),
+    });
   });
 
   it("rejects params arrays at top level and huge string keys", () => {
